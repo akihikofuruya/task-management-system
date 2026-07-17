@@ -1,5 +1,6 @@
 package com.example.taskmanagement.dto.task;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
@@ -24,6 +25,15 @@ public class TaskSearchRequest {
     private LocalDate toDate;
 
     public TaskSearchRequest() {
+    }
+
+    @AssertTrue(message = "期限開始日は期限終了日以前の日付を指定してください。")
+    public boolean isValidDateRange() {
+        if (fromDate == null || toDate == null) {
+            return true;
+        }
+
+        return !fromDate.isAfter(toDate);
     }
 
     public String getTitle() {

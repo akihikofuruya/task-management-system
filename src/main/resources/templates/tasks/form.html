@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タスク入力 | タスク管理</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="/tasks">タスク管理</a>
+    <nav class="nav">
+        <a class="button secondary" href="/tasks">一覧へ戻る</a>
+    </nav>
+</header>
+<main class="form-panel">
+    <h1 id="pageTitle">タスク登録</h1>
+    <p class="muted">タスク情報を入力してください。</p>
+    <div id="message" class="message"></div>
+    <form id="taskForm">
+        <div class="field">
+            <label for="title">タイトル</label>
+            <input id="title" name="title" type="text" maxlength="100" required>
+        </div>
+        <div class="field">
+            <label for="content">内容</label>
+            <textarea id="content" name="content" maxlength="1000"></textarea>
+        </div>
+        <div class="field">
+            <label for="dueDate">期限</label>
+            <input id="dueDate" name="dueDate" type="date" required>
+        </div>
+        <div class="field">
+            <label for="priority">優先度</label>
+            <select id="priority" name="priority" required>
+                <option value="1">高</option>
+                <option value="2" selected>中</option>
+                <option value="3">低</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="status">ステータス</label>
+            <select id="status" name="status" required>
+                <option value="0" selected>未着手</option>
+                <option value="1">対応中</option>
+                <option value="2">完了</option>
+            </select>
+        </div>
+        <div class="actions">
+            <button type="submit">保存</button>
+            <a class="button secondary" href="/tasks">キャンセル</a>
+        </div>
+    </form>
+</main>
+<script>
+const userId = localStorage.getItem('userId');
+const taskId = location.pathname.match(/^\/tasks\/(\d+)\/edit$/)?.[1];
+const form = document.getElementById('taskForm');
+const message = document.getElementById('message');
+
+if (!userId) {
+    location.href = '/login';
+}
+
+function showMessage(text, type) {
+    message.textContent = text;
+    message.className = `message is-${type}`;
+}
+
+function fillForm(task) {
+    form.title.value = task.title || '';
+    form.content.value = task.content || '';
+    form.dueDate.value = task.dueDate || '';
+    form.priority.value = task.priority || 2;
+    form.status.value = task.status || 0;
+}
+
+async function loadTask() {
+    if (!taskId) {
+        return;
+    }
+    document.getElementById('pageTitle').textContent = 'タスク編集';
+    const response = await fetch(`/api/tasks/${taskId}`, {
+        headers: {'X-User-Id': userId}
+    });
+    if (!response.ok) {
+        showMessage('タスク情報の取得に失敗しました。', 'error');
+        return;
+    }
+    fillForm(await response.json());
+}
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const body = {
+        title: form.title.value,
+        content: form.content.value,
+        dueDate: form.dueDate.value,
+        priority: Number(form.priority.value),
+        status: Number(form.status.value)
+    };
+    const response = await fetch(taskId ? `/api/tasks/${taskId}` : '/api/tasks', {
+        method: taskId ? 'PUT' : 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-User-Id': userId
+        },
+        body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+        showMessage('保存に失敗しました。入力内容を確認してください。', 'error');
+        return;
+    }
+    const task = await response.json();
+    location.href = `/tasks/${task.id}`;
+});
+
+loadTask();
+</script>
+</body>
+</html>

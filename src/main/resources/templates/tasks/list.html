@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タスク一覧 | タスク管理</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div>
+    <header class="topbar">
+        <a class="brand" href="/tasks">タスク管理</a>
+        <nav class="nav">
+            <span id="userName" class="muted"></span>
+            <a class="button secondary" href="/tasks/new">新規登録</a>
+            <button id="logoutButton" type="button" class="secondary">ログアウト</button>
+        </nav>
+    </header>
+    <main class="container">
+        <div class="page-header">
+            <div>
+                <h1>タスク一覧</h1>
+                <p class="muted">登録済みタスクを期限順に確認できます。</p>
+            </div>
+        </div>
+        <div id="message" class="message"></div>
+        <form id="searchForm" class="search-bar">
+            <input name="title" type="search" maxlength="100" placeholder="タイトル">
+            <select name="status">
+                <option value="">ステータス</option>
+                <option value="0">未着手</option>
+                <option value="1">対応中</option>
+                <option value="2">完了</option>
+            </select>
+            <select name="priority">
+                <option value="">優先度</option>
+                <option value="1">高</option>
+                <option value="2">中</option>
+                <option value="3">低</option>
+            </select>
+            <input name="fromDate" type="date">
+            <input name="toDate" type="date">
+            <button type="submit">検索</button>
+        </form>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>タイトル</th>
+                    <th>期限</th>
+                    <th>優先度</th>
+                    <th>ステータス</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="taskRows"></tbody>
+            </table>
+        </div>
+    </main>
+</div>
+<script>
+const userId = localStorage.getItem('userId');
+const userName = localStorage.getItem('userName');
+const message = document.getElementById('message');
+const rows = document.getElementById('taskRows');
+const searchForm = document.getElementById('searchForm');
+
+if (!userId) {
+    location.href = '/login';
+}
+
+document.getElementById('userName').textContent = userName || '';
+
+function showMessage(text, type) {
+    message.textContent = text;
+    message.className = `message is-${type}`;
+}
+
+function buildQuery() {
+    const params = new URLSearchParams();
+    new FormData(searchForm).forEach((value, key) => {
+        if (value) {
+            params.append(key, value);
+        }
+    });
+    return params.toString();
+}
+
+function renderTasks(tasks) {
+    rows.innerHTML = '';
+    if (tasks.length === 0) {
+        rows.innerHTML = '<tr><td colspan="5" class="muted">タスクはありません。</td></tr>';
+        return;
+    }
+    tasks.forEach((task) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><a href="/tasks/${task.id}">${task.title}</a></td>
+            <td>${task.dueDate || ''}</td>
+            <td><span class="priority">${task.priorityName || task.priority}</span></td>
+            <td><span class="status">${task.statusName || task.status}</span></td>
+            <td class="toolbar">
+                <a class="button secondary" href="/tasks/${task.id}/edit">編集</a>
+                <button class="danger" type="button" data-delete-id="${task.id}">削除</button>
+            </td>
+        `;
+        rows.appendChild(tr);
+    });
+}
+
+async function loadTasks() {
+    const query = buildQuery();
+    const response = await fetch(`/api/tasks${query ? `?${query}` : ''}`, {
+        headers: {'X-User-Id': userId}
+    });
+    if (!response.ok) {
+        showMessage('タスク一覧の取得に失敗しました。', 'error');
+        return;
+    }
+    renderTasks(await response.json());
+}
+
+searchForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    loadTasks();
+});
+
+rows.addEventListener('click', async (event) => {
+    const deleteId = event.target.dataset.deleteId;
+    if (!deleteId || !confirm('タスクを削除しますか。')) {
+        return;
+    }
+    const response = await fetch(`/api/tasks/${deleteId}`, {
+        method: 'DELETE',
+        headers: {'X-User-Id': userId}
+    });
+    if (!response.ok) {
+        showMessage('タスクの削除に失敗しました。', 'error');
+        return;
+    }
+    showMessage('タスクを削除しました。', 'success');
+    loadTasks();
+});
+
+document.getElementById('logoutButton').addEventListener('click', () => {
+    localStorage.clear();
+    location.href = '/login';
+});
+
+loadTasks();
+</script>
+</body>
+</html>

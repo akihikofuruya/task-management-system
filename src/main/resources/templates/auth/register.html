@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ユーザー登録 | タスク管理</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main class="auth-panel">
+    <h1>ユーザー登録</h1>
+    <p class="muted">利用者情報を入力してください。</p>
+    <div id="message" class="message"></div>
+    <form id="registerForm">
+        <div class="field">
+            <label for="name">名前</label>
+            <input id="name" name="name" type="text" maxlength="100" required>
+        </div>
+        <div class="field">
+            <label for="email">メールアドレス</label>
+            <input id="email" name="email" type="email" maxlength="255" required>
+        </div>
+        <div class="field">
+            <label for="password">パスワード</label>
+            <input id="password" name="password" type="password" minlength="8" maxlength="20" required>
+        </div>
+        <div class="actions">
+            <button type="submit">登録</button>
+            <a class="button secondary" href="/login">ログインへ戻る</a>
+        </div>
+    </form>
+</main>
+<script>
+const form = document.getElementById('registerForm');
+const message = document.getElementById('message');
+
+function showMessage(text, type) {
+    message.textContent = text;
+    message.className = `message is-${type}`;
+}
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            name: form.name.value,
+            email: form.email.value,
+            password: form.password.value
+        })
+    });
+
+    if (!response.ok) {
+        showMessage('登録に失敗しました。入力内容を確認してください。', 'error');
+        return;
+    }
+
+    const data = await response.json();
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('userId', data.userId);
+    localStorage.setItem('userName', data.userName);
+    location.href = '/tasks';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タスク詳細 | タスク管理</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="/tasks">タスク管理</a>
+    <nav class="nav">
+        <a class="button secondary" href="/tasks">一覧へ戻る</a>
+        <a id="editLink" class="button secondary" href="#">編集</a>
+    </nav>
+</header>
+<main class="detail-panel">
+    <h1 id="title">タスク詳細</h1>
+    <div id="message" class="message"></div>
+    <dl class="detail-grid">
+        <dt>内容</dt>
+        <dd id="content"></dd>
+        <dt>期限</dt>
+        <dd id="dueDate"></dd>
+        <dt>優先度</dt>
+        <dd id="priority"></dd>
+        <dt>ステータス</dt>
+        <dd id="status"></dd>
+        <dt>作成日時</dt>
+        <dd id="createdAt"></dd>
+        <dt>更新日時</dt>
+        <dd id="updatedAt"></dd>
+    </dl>
+</main>
+<script>
+const userId = localStorage.getItem('userId');
+const taskId = '[[${taskId}]]';
+const message = document.getElementById('message');
+
+if (!userId) {
+    location.href = '/login';
+}
+
+function showMessage(text, type) {
+    message.textContent = text;
+    message.className = `message is-${type}`;
+}
+
+function setText(id, value) {
+    document.getElementById(id).textContent = value || '';
+}
+
+async function loadTask() {
+    const response = await fetch(`/api/tasks/${taskId}`, {
+        headers: {'X-User-Id': userId}
+    });
+    if (!response.ok) {
+        showMessage('タスク詳細の取得に失敗しました。', 'error');
+        return;
+    }
+    const task = await response.json();
+    setText('title', task.title);
+    setText('content', task.content);
+    setText('dueDate', task.dueDate);
+    setText('priority', task.priorityName || task.priority);
+    setText('status', task.statusName || task.status);
+    setText('createdAt', task.createdAt);
+    setText('updatedAt', task.updatedAt);
+    document.getElementById('editLink').href = `/tasks/${task.id}/edit`;
+}
+
+loadTask();
+</script>
+</body>
+</html>
