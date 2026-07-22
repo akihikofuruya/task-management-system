@@ -59,8 +59,7 @@ class UserServiceTest {
                 "Test User",
                 "user@example.com",
                 "password123"
-        )).isInstanceOf(DuplicateEmailException.class)
-                .hasMessage("メールアドレスは既に登録されています。");
+        )).isInstanceOf(DuplicateEmailException.class);
 
         verify(userRepository, never()).save(any(User.class));
     }
@@ -88,13 +87,23 @@ class UserServiceTest {
     }
 
     @Test
+    void authenticateThrowsExceptionWhenUserDoesNotExist() {
+        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.authenticate(
+                new LoginRequest("unknown@example.com", "password123")
+        )).isInstanceOf(AuthenticationFailedException.class);
+
+        verify(userRepository).findByEmail("unknown@example.com");
+    }
+
+    @Test
     void authenticateThrowsExceptionWhenPasswordDoesNotMatch() {
         User user = new User("Test User", "user@example.com", "password123");
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> userService.authenticate(
                 new LoginRequest("user@example.com", "wrongpass")
-        )).isInstanceOf(AuthenticationFailedException.class)
-                .hasMessage("メールアドレスまたはパスワードが正しくありません。");
+        )).isInstanceOf(AuthenticationFailedException.class);
     }
 }

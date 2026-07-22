@@ -48,8 +48,15 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public User authenticate(LoginRequest request) {
-        User user = userRepository.findByEmail(normalizeEmail(request.getEmail()))
-                .orElseThrow(this::authenticationFailed);
+        Optional<User> foundUser = userRepository.findByEmail(
+                normalizeEmail(request.getEmail())
+        );
+
+        if (foundUser.isEmpty()) {
+            throw authenticationFailed();
+        }
+
+        User user = foundUser.get();
 
         if (!matchesPassword(request.getPassword(), user.getPassword())) {
             throw authenticationFailed();
