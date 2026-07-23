@@ -41,6 +41,33 @@ class TaskServiceTest {
     private TaskService taskService;
 
     @Test
+    void findTasksSearchesByUserWithoutConditions() {
+        User user = new User("Test User", "user@example.com", "password123");
+        Task task = new Task(
+                user,
+                "Task title",
+                "Task content",
+                LocalDate.of(2026, 7, 20),
+                2,
+                0
+        );
+
+        when(taskRepository.searchTasks(
+                1L,
+                null,
+                null,
+                null,
+                null,
+                null
+        )).thenReturn(List.of(task));
+
+        List<TaskResponse> result = taskService.findTasks(1L, null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getTitle()).isEqualTo("Task title");
+    }
+
+    @Test
     void findTasksSearchesByUserAndConditions() {
         TaskSearchRequest request = new TaskSearchRequest();
         request.setTitle(" Java ");
@@ -72,6 +99,25 @@ class TaskServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getTitle()).isEqualTo("Java study");
+    }
+
+    @Test
+    void findTasksReturnsEmptyListWhenNoTasksMatch() {
+        TaskSearchRequest request = new TaskSearchRequest();
+        request.setTitle("Not found");
+
+        when(taskRepository.searchTasks(
+                1L,
+                "Not found",
+                null,
+                null,
+                null,
+                null
+        )).thenReturn(List.of());
+
+        List<TaskResponse> result = taskService.findTasks(1L, request);
+
+        assertThat(result).isEmpty();
     }
 
     @Test

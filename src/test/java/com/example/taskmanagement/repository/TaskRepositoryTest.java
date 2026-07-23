@@ -25,6 +25,68 @@ class TaskRepositoryTest {
     private TaskRepository taskRepository;
 
     @Test
+    void saveCreatesTask() {
+        User user = saveUser("user@example.com");
+        Task task = new Task(
+                user,
+                "New task",
+                "new content",
+                LocalDate.of(2026, 7, 20),
+                2,
+                0
+        );
+
+        Task savedTask = taskRepository.save(task);
+
+        assertThat(savedTask.getId()).isNotNull();
+        assertThat(taskRepository.findById(savedTask.getId()))
+                .isPresent()
+                .get()
+                .satisfies(foundTask -> {
+                    assertThat(foundTask.getTitle()).isEqualTo("New task");
+                    assertThat(foundTask.getContent()).isEqualTo("new content");
+                    assertThat(foundTask.getDueDate()).isEqualTo(LocalDate.of(2026, 7, 20));
+                    assertThat(foundTask.getPriority()).isEqualTo(2);
+                    assertThat(foundTask.getStatus()).isEqualTo(0);
+                    assertThat(foundTask.getUser().getId()).isEqualTo(user.getId());
+                });
+    }
+
+    @Test
+    void saveUpdatesTask() {
+        User user = saveUser("user@example.com");
+        Task task = saveTask(user, "Before update", LocalDate.of(2026, 7, 20), 2, 0);
+
+        task.setTitle("After update");
+        task.setContent("updated content");
+        task.setDueDate(LocalDate.of(2026, 7, 25));
+        task.setPriority(1);
+        task.setStatus(1);
+        taskRepository.save(task);
+
+        assertThat(taskRepository.findById(task.getId()))
+                .isPresent()
+                .get()
+                .satisfies(updatedTask -> {
+                    assertThat(updatedTask.getTitle()).isEqualTo("After update");
+                    assertThat(updatedTask.getContent()).isEqualTo("updated content");
+                    assertThat(updatedTask.getDueDate()).isEqualTo(LocalDate.of(2026, 7, 25));
+                    assertThat(updatedTask.getPriority()).isEqualTo(1);
+                    assertThat(updatedTask.getStatus()).isEqualTo(1);
+                });
+    }
+
+    @Test
+    void deleteRemovesTask() {
+        User user = saveUser("user@example.com");
+        Task task = saveTask(user, "Delete task", LocalDate.of(2026, 7, 20), 2, 0);
+
+        taskRepository.delete(task);
+
+        assertThat(taskRepository.findById(task.getId())).isEmpty();
+    }
+
+    @Test
     void findByUserIdReturnsOnlyUsersTasks() {
         User user = saveUser("user@example.com");
         User otherUser = saveUser("other@example.com");
@@ -96,6 +158,23 @@ class TaskRepositoryTest {
         );
 
         assertThat(result).extracting(Task::getId).containsExactly(matchingTask.getId());
+    }
+
+    @Test
+    void searchTasksReturnsEmptyWhenNoTaskMatchesConditions() {
+        User user = saveUser("user@example.com");
+        saveTask(user, "Spring task", LocalDate.of(2026, 7, 20), 2, 0);
+
+        List<Task> result = taskRepository.searchTasks(
+                user.getId(),
+                "java",
+                1,
+                1,
+                LocalDate.of(2026, 7, 1),
+                LocalDate.of(2026, 7, 31)
+        );
+
+        assertThat(result).isEmpty();
     }
 
     @Test

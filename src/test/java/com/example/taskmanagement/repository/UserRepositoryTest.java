@@ -4,10 +4,12 @@ import com.example.taskmanagement.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
@@ -58,5 +60,21 @@ class UserRepositoryTest {
         boolean result = userRepository.existsByEmail("missing@example.com");
 
         assertThat(result).isFalse();
+    }
+
+    @Test
+    void saveThrowsExceptionWhenEmailIsDuplicated() {
+        userRepository.saveAndFlush(new User(
+                "Test User",
+                "user@example.com",
+                "password123"
+        ));
+
+        assertThatThrownBy(() -> userRepository.saveAndFlush(new User(
+                "Duplicate User",
+                "user@example.com",
+                "password456"
+        )))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }
