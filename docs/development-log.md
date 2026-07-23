@@ -604,3 +604,98 @@ if (foundUser.isEmpty()) {
 - タスク一覧取得0件のテストを追加する
 - 単体テスト仕様書の未実装項目を、今後対応か対象外か整理する
 - JWT、パスワードハッシュ化、PDF出力を実装するか検討する
+
+## 2026-07-23
+
+### 実施内容
+
+#### 単体テスト項目と実装済みテストの照合
+
+単体テストケース一覧と、現在のJUnitテストの対応状況を確認した。
+
+主に以下の観点で整理した。
+
+- `AuthControllerTest` はログイン、認証失敗、ログアウトのControllerテストに対応すること
+- `TaskControllerTest` はタスク一覧取得、登録、詳細取得、更新、削除、ステータス変更のControllerテストに対応すること
+- `TaskRepositoryTest` はTaskRepositoryのDB検索、保存、更新、削除のテストに対応すること
+- PDF出力、JWTトークン生成、`PasswordEncoder` を利用したパスワード照合は、現在の実装には存在しないためテスト対象外として扱うこと
+
+#### TaskRepositoryTestの追加
+
+`TaskRepositoryTest` に、単体テスト項目として不足していた以下のケースを追加した。
+
+- `saveCreatesTask()`
+- `saveUpdatesTask()`
+- `deleteRemovesTask()`
+- `searchTasksReturnsEmptyWhenNoTaskMatchesConditions()`
+
+これにより、TaskRepositoryについて以下の確認ができるようになった。
+
+- タスク登録
+- タスク更新
+- タスク削除
+- 検索結果0件
+- ユーザー別タスク取得
+- 所有者確認
+- 期限日順取得
+- 条件あり検索
+- 条件なし検索
+
+#### UserRepositoryTestの追加
+
+`UserRepositoryTest` に、メールアドレス重複時のDB制約違反を確認するテストを追加した。
+
+- `saveThrowsExceptionWhenEmailIsDuplicated()`
+
+同一メールアドレスのユーザーを登録しようとした場合に、`DataIntegrityViolationException` が発生することを確認する内容とした。
+
+#### TaskServiceTestの追加
+
+`TaskServiceTest` に、タスク検索系の不足ケースを追加した。
+
+- `findTasksSearchesByUserWithoutConditions()`
+- `findTasksReturnsEmptyListWhenNoTasksMatch()`
+
+これにより、検索条件なしの場合と、検索条件に一致するタスクが存在しない場合のService層の動作を確認できるようにした。
+
+#### 総合テスト項目の整理
+
+総合テストでは、画面またはAPIを通して以下のような一連の操作を確認する方針で整理した。
+
+- ユーザー登録
+- ログイン
+- タスク登録
+- タスク一覧表示
+- タスク詳細表示
+- タスク編集
+- ステータス変更
+- タスク検索
+- タスク削除
+- ログアウト
+
+単体テストはRepository、Service、Controllerを個別に確認し、総合テストは画面またはAPIから `Controller -> Service -> Repository -> DB` まで処理がつながることを確認するものとして切り分けた。
+
+### 確認結果
+
+`mvnw test` を実行し、以下の結果となった。
+
+- テスト件数: 44件
+- 失敗: 0件
+- エラー: 0件
+- スキップ: 0件
+
+ビルド結果は `BUILD SUCCESS` となり、追加した単体テストを含めて全テストが成功した。
+
+### 学び・気付き
+
+テスト仕様書と実装済みコードでは、クラス名や責務が一致していない箇所があるため、テスト項目をそのままコードに当てはめるのではなく、現在の実装上の役割に置き換えて確認する必要があると分かった。
+
+特に、仕様書上の `LoginController` は現在の実装では `AuthController` に相当し、JWT生成やPDF出力は未実装のため、テスト対象外として整理する必要がある。
+
+また、Controllerテスト、Serviceテスト、Repositoryテストでは確認する範囲が異なるため、同じ「タスク登録」でも、どの層を対象にしたテストかを明確にすることが重要だと分かった。
+
+### 次にやること
+
+- 総合テスト項目表に沿って、デモ画面またはAPIから一連の動作確認を行う
+- PDF出力やJWT認証を今後実装するか、仕様書上で対象外として整理する
+- テストケース一覧とJUnitテストクラスの対応関係を資料上でも分かりやすく整理する
